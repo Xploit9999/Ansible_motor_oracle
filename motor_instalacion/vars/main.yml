@@ -1,0 +1,8 @@
+---
+# vars file for motor_instalacion
+oracle_home: /oracle/app/ora19c/product/19.0.0.0/dbhome_1
+oracle_tmp: /oracle/tmp
+oracle_base: /oracle/app/ora19c
+ora19c_home: /home/ora19c
+dist: OEL7.8
+instalador:
