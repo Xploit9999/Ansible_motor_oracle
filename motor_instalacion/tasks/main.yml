@@ -15,7 +15,6 @@
     mode: '0775'
 
 - block:
-
   - name: Instalacion motor | Crea directorio temporal en oracle para logs
     file:
       path: "{{ oracle_tmp }}"
@@ -30,49 +29,33 @@
       dest: "{{ oracle_home }}"
       owner: ora19c
       group: oinstall
+  when: inventory_hostname in groups['nodo1'] or inventory_hostname in groups['standalone']
 
-  - name: Instalacion motor | Contenido /etc/hosts
-    slurp:
-      src: /etc/hosts
-    register: host
+- block:
 
-  - name: Instalacion motor | Encuentra coincidencias de las entradas VIP
-    set_fact:
-      formatear_vip: "{{ formatear_vip + item.split()[1] | regex_replace('-vip','') + ',' }}"
-    loop: "{{ encontrar_vip }}"
-    vars:
-      formatear_vip: ''
+  - name: Instalacion motor | Incluir tarea para cluster (NODO1)
+    include_tasks: cluster.yml
+    when: inventory_hostname in groups['nodo1']
 
-  - name: Instalacion motor | Remueve delimitador final sobre las VIP
-    set_fact:
-      cluster: "{{ formatear_vip | regex_replace(',$', '') }}"
+  - name: Instalacion motor | Incluir tarea para Standalone
+    include_tasks: standalone.yml
+    when: inventory_hostname in groups['standalone']
 
-  - name: Instalacion motor | Envia template para e responsefile que se va a usar
-    template:
-      src: software_motor.rsp.j2
-      dest: /tmp/software_motor.rsp
+  rescue:
 
-  - name: Instalacion motor | Ejecuta instalador del motor
-    shell: ./runInstaller -silent -ignorePrereqFailure -responseFile /tmp/software_motor.rsp
-    args:
-      chdir: "{{ oracle_home }}"
-    register: progreso
-    failed_when: "'error' in progreso.stdout"
+  - name: Instalacion motor | Error controlado si hubo fallas con el instalador. 
+    fail:
+      msg: "Hubo un error en la ejecución por favor validar. [ X ] !!!"
     ignore_errors: true
 
-  when: inventory_hostname in groups['nodo1']
-  become_user: ora19c
-  environment:
-    HOME: "{{ ora19c_home }}"
-    CV_ASSUME_DISTID: "{{ dist }}"
-    TMPDIR: "{{ oracle_tmp }}"
-    TMP: "{{ oracle_tmp }}"
-    LD_LIBRARY_PATH: "{{ oracle_home }}/lib"
-    ORACLE_BASE: "{{ oracle_base }}"
+  - meta: end_play
 
 - name: Instalacion motor | Ejecuta script de root
-  shell: "{{ oracle_home }}/root.sh"
+  shell: "./root.sh"
   register: segunda_parte
+  args:
+    chdir: "{{ oracle_home }}"
+    executable: /bin/sh
 
 - debug:
     msg: "{{ segunda_parte.stdout }}"
@@ -80,5 +63,4 @@
 - debug:
     msg: "Se ha completado con exito la instalacion del software del motor. ^ __ ^"
   changed_when: true
-
 ...

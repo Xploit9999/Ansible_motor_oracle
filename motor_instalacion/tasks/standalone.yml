@@ -1,0 +1,24 @@
+---
+- block:
+  - name: Instalacion motor | Envia template para e responsefile que se va a usar
+    template:
+      src: software_motor_standalone.rsp.j2
+      dest: /tmp/software_motor.rsp
+
+  - name: Instalacion motor | Ejecuta instalador del motor
+    shell: ./runInstaller -silent -ignorePrereqFailure -responseFile /tmp/software_motor_standalone.rsp
+    args:
+      chdir: "{{ oracle_home }}"
+    register: progreso
+    failed_when: "'error' in progreso.stdout"
+    ignore_errors: true
+
+  become_user: ora19c
+  environment:
+    HOME: "{{ ora19c_home }}"
+    CV_ASSUME_DISTID: "{{ dist }}"
+    TMPDIR: "{{ oracle_tmp }}"
+    TMP: "{{ oracle_tmp }}"
+    LD_LIBRARY_PATH: "{{ oracle_home }}/lib"
+    ORACLE_BASE: "{{ oracle_base }}"
+.

@@ -1,0 +1,40 @@
+---
+- block:
+  - name: Instalacion motor | Contenido /etc/hosts
+    slurp:
+      src: /etc/hosts
+    register: host
+
+  - name: Instalacion motor | Encuentra coincidencias de las entradas VIP
+    set_fact:
+      formatear_vip: "{{ formatear_vip + item.split()[1] | regex_replace('-vip','') + ',' }}"
+    loop: "{{ encontrar_vip }}"
+    vars:
+      formatear_vip: ''
+
+  - name: Instalacion motor | Remueve delimitador final sobre las VIP
+    set_fact:
+      cluster: "{{ formatear_vip | regex_replace(',$', '') }}"
+
+  - name: Instalacion motor | Envia template para e responsefile que se va a usar
+    template:
+      src: software_motor.rsp.j2
+      dest: /tmp/software_motor.rsp
+
+  - name: Instalacion motor | Ejecuta instalador del motor
+    shell: ./runInstaller -silent -ignorePrereqFailure -responseFile /tmp/software_motor.rsp
+    args:
+      chdir: "{{ oracle_home }}"
+    register: progreso
+    failed_when: "'error' in progreso.stdout"
+    ignore_errors: true
+
+  become_user: ora19c
+  environment:
+    HOME: "{{ ora19c_home }}"
+    CV_ASSUME_DISTID: "{{ dist }}"
+    TMPDIR: "{{ oracle_tmp }}"
+    TMP: "{{ oracle_tmp }}"
+    LD_LIBRARY_PATH: "{{ oracle_home }}/lib"
+    ORACLE_BASE: "{{ oracle_base }}"
+...
